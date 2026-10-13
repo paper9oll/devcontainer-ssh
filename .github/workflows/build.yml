@@ -59,6 +59,13 @@ jobs:
           tags: devcontainer-ssh:test
           cache-from: type=gha
 
+      - name: Validate startup script
+        run: |
+          docker run --rm \
+            --entrypoint /bin/sh \
+            devcontainer-ssh:test \
+            -c 'test "$(head -c 2 /usr/local/bin/start-ssh)" = "#!"'
+
       - name: Validate OpenSSH
         run: |
           docker run --rm \
