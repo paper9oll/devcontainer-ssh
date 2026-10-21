@@ -1,0 +1,24 @@
+services:
+  devcontainer:
+    image: ghcr.io/paper9oll/devcontainer-ssh:${IMAGE_TAG}
+    container_name: devcontainer
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "bash", "-c", ":</dev/tcp/127.0.0.1/22"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    env_file:
+      - .env
+    ports:
+      - "2222:22"
+    volumes:
+      - dev-home:/home/vscode
+      - dev-hostkeys:/ssh-host-keys
+      - tailscale-state:/var/lib/tailscale
+
+volumes:
+  dev-home:
+  dev-hostkeys:
+  tailscale-state:
