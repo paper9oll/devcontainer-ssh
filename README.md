@@ -72,7 +72,7 @@ services:
         env_file:
             - .env
         ports:
-            - '{$SSH_PORT}:22'
+            - '${SSH_PORT}:22'
         volumes:
             - dev-home:/home/vscode
             - dev-hostkeys:/ssh-host-keys
