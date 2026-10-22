@@ -53,7 +53,19 @@ jobs:
             org.opencontainers.image.title=Dev Container SSH
             org.opencontainers.image.description=Microsoft Dev Container with optional OpenSSH and Tailscale SSH
 
-      - name: Build test image
+      - name: Generate Tailscale SSH image metadata
+        id: meta-ts
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest-ts,enable=${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
+            type=raw,value=build-${{ github.run_id }}-${{ github.run_attempt }}-ts,enable=${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
+          labels: |
+            org.opencontainers.image.title=Dev Container SSH with Tailscale SSH
+            org.opencontainers.image.description=SSH-enabled Microsoft Dev Container with Tailscale SSH
+
+      - name: Build standard test image
         uses: docker/build-push-action@v7
         with:
           context: .
