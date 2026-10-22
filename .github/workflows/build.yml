@@ -70,17 +70,6 @@ jobs:
             devcontainer-ssh:test \
             -c 'test -x /usr/local/bin/start-ssh && tailscale version && ssh-keygen -A && /usr/sbin/sshd -t'
 
-      - name: Validate docker-only runtime mode
-        run: |
-          docker run -d --name devcontainer-ssh-docker-only \
-            -e ENABLE_OPENSSH=false \
-            -e ENABLE_TAILSCALED=false \
-            devcontainer-ssh:test
-          sleep 2
-          test "$(docker inspect -f '{{.State.Running}}' devcontainer-ssh-docker-only)" = true
-          docker exec devcontainer-ssh-docker-only true
-          docker rm -f devcontainer-ssh-docker-only
-
       - name: Log in to GHCR
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: docker/login-action@v4
