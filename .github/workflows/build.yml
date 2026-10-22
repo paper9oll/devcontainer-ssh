@@ -41,7 +41,7 @@ jobs:
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Generate standard image metadata
+      - name: Generate image metadata
         id: meta
         uses: docker/metadata-action@v6
         with:
@@ -51,55 +51,35 @@ jobs:
             type=raw,value=build-${{ github.run_id }}-${{ github.run_attempt }},enable=${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
           labels: |
             org.opencontainers.image.title=Dev Container SSH
-            org.opencontainers.image.description=SSH-enabled Microsoft Dev Container
+            org.opencontainers.image.description=Microsoft Dev Container with optional OpenSSH and Tailscale SSH
 
-      - name: Generate Tailscale SSH image metadata
-        id: meta-ts
-        uses: docker/metadata-action@v6
-        with:
-          images: ghcr.io/${{ github.repository }}
-          tags: |
-            type=raw,value=latest-ts,enable=${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
-            type=raw,value=build-${{ github.run_id }}-${{ github.run_attempt }}-ts,enable=${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
-          labels: |
-            org.opencontainers.image.title=Dev Container SSH with Tailscale SSH
-            org.opencontainers.image.description=SSH-enabled Microsoft Dev Container with Tailscale SSH
-
-      - name: Build standard test image
+      - name: Build test image
         uses: docker/build-push-action@v7
         with:
           context: .
-          target: latest
           pull: true
           load: true
           platforms: linux/amd64
           tags: devcontainer-ssh:test
           cache-from: type=gha
 
-      - name: Validate standard image
+      - name: Validate image contents
         run: |
           docker run --rm \
             --entrypoint /bin/sh \
             devcontainer-ssh:test \
-            -c 'test "$(head -c 2 /usr/local/bin/start-ssh)" = "#!" && ssh-keygen -A && /usr/sbin/sshd -t'
+            -c 'test -x /usr/local/bin/start-ssh && tailscale version && ssh-keygen -A && /usr/sbin/sshd -t'
 
-      - name: Build Tailscale SSH test image
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          target: tailscale
-          pull: true
-          load: true
-          platforms: linux/amd64
-          tags: devcontainer-ssh:ts-test
-          cache-from: type=gha
-
-      - name: Validate Tailscale SSH image
+      - name: Validate docker-only runtime mode
         run: |
-          docker run --rm \
-            --entrypoint /bin/sh \
-            devcontainer-ssh:ts-test \
-            -c 'test "$(head -c 2 /usr/local/bin/start-ssh-tailscale)" = "#!" && tailscale version && ssh-keygen -A && /usr/sbin/sshd -t'
+          docker run -d --name devcontainer-ssh-docker-only \
+            -e ENABLE_OPENSSH=false \
+            -e ENABLE_TAILSCALED=false \
+            devcontainer-ssh:test
+          sleep 2
+          test "$(docker inspect -f '{{.State.Running}}' devcontainer-ssh-docker-only)" = true
+          docker exec devcontainer-ssh-docker-only true
+          docker rm -f devcontainer-ssh-docker-only
 
       - name: Log in to GHCR
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
@@ -109,35 +89,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and publish standard image
+      - name: Build and publish image
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: docker/build-push-action@v7
         with:
           context: .
-          target: latest
           push: true
           pull: true
           no-cache: ${{ github.event_name == 'schedule' }}
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          provenance: mode=min
-          sbom: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and publish Tailscale SSH image
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          target: tailscale
-          push: true
-          pull: true
-          no-cache: ${{ github.event_name == 'schedule' }}
-          platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.meta-ts.outputs.tags }}
-          labels: ${{ steps.meta-ts.outputs.labels }}
           provenance: mode=min
           sbom: true
           cache-from: type=gha
