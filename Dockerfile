@@ -1,6 +1,8 @@
 # Unofficial SSH-enabled extension of Microsoft's Dev Containers
 # Upstream: https://github.com/devcontainers/images
 
+FROM node:24-trixie AS node
+
 FROM mcr.microsoft.com/devcontainers/base:trixie
 
 USER root
@@ -16,8 +18,16 @@ RUN apt-get update \
         curl \
         openssh-server \
     && curl -fsSL https://tailscale.com/install.sh | sh \
-    && apt-get purge -y --auto-remove curl \
     && rm -rf /var/lib/apt/lists/*
+
+# Use the official Node.js 24 image as the source for Node and its bundled npm.
+COPY --from=node /usr/local/bin/node /usr/local/bin/node
+COPY --from=node /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/npm
+RUN ln -s /usr/local/bin/node /usr/local/bin/nodejs \
+    && ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+    && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
+    && node --version \
+    && npm --version
 
 # Prepare SSH runtime and workspace directories.
 RUN mkdir -p \
