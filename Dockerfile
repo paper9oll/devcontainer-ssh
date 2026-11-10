@@ -18,6 +18,7 @@ RUN apt-get update \
         curl \
         libnspr4 \
         openssh-server \
+    && apt-get upgrade -y \
     && curl -fsSL https://tailscale.com/install.sh | sh \
     && rm -rf /var/lib/apt/lists/*
 
