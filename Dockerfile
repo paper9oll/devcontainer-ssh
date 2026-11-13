@@ -16,7 +16,6 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
         curl \
-        libnspr4 \
         openssh-server \
     && apt-get upgrade -y \
     && curl -fsSL https://tailscale.com/install.sh | sh \
@@ -30,6 +29,10 @@ RUN ln -s /usr/local/bin/node /usr/local/bin/nodejs \
     && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
     && node --version \
     && npm --version
+
+# Install Playwright browsers and their system dependencies.
+RUN npx playwright install --with-deps \
+    && rm -rf /var/lib/apt/lists/*
 
 # Prepare SSH runtime and workspace directories.
 RUN mkdir -p \
